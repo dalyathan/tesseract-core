@@ -662,7 +662,11 @@ class TestStepRoundedByInputDtype:
         assert np.allclose(np.diagonal(jac["y"]["x"]), 1.0, rtol=1e-6)
 
     def test_stochastic_vjp_of_identity_with_one_hot_cotangent(self):
-        """Element 0 of the estimate is the applied step divided by itself."""
+        """Element 0 of the estimate is the applied step divided by itself.
+
+        The other elements also pick up the other inputs' steps, which is SPSA
+        noise, so only element 0 has an exact expected value.
+        """
         vjp = finite_difference_vjp(
             float32_identity_apply,
             Float32InputSchema(x=np.full(4, 1000.0, dtype=np.float32)),
@@ -703,8 +707,11 @@ class TestStepRoundedByInputDtype:
                 eps=1e-4,
             )
 
-    def test_jvp_runs_when_only_some_tangent_components_round_away(self):
-        """A tangent component of 1e-5 moves its element by 1e-9, below float32."""
+    def test_jvp_runs_when_some_tangent_components_round_away(self):
+        """A tangent component of 1e-5 moves its element by 1e-9, below float32.
+
+        rtol allows for float32 rounding of the outputs at eps=1e-4.
+        """
         jvp = finite_difference_jvp(
             float32_identity_apply,
             _float32_inputs(1.0),

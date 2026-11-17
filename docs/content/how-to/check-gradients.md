@@ -92,7 +92,7 @@ If an endpoint raises an exception, the check reports it with the file and line 
 
 ```
   Input path: 'x', Output path: 'y', Index: (2,)
-  Encountered exception: ValueError: 'A step of eps=1e-07 does not change input 'x' at index (2,), because it is below the precision of the input's dtype at that value. Use a larger eps.' in file …
+  Encountered exception: ValueError: 'A step of eps=1e-07 does not change input 'x' at index (2,), because it is below the precision of the input's dtype at that value. Values of its dtype are 2.38e-07 apart there, so use an eps well above that.'
 ```
 
 A step only a few times larger than the input's precision runs, but rounding in the outputs can still dominate the difference. Try `1e-3` or `1e-2` for `float32`.

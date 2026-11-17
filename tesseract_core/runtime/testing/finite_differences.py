@@ -227,20 +227,33 @@ def _perturb_input(
     return set_at_path(inputs_dict, {input_path: input_val}), step
 
 
-def _step_too_small(eps: float, what: str) -> ValueError:
+def _step_too_small(eps: float, what: str, spacing: float | None = None) -> ValueError:
     """Error for a step that rounding to the input's dtype cancelled."""
+    hint = (
+        f"Values of its dtype are {spacing:.3g} apart there, so use an eps well "
+        "above that."
+        if spacing is not None
+        else "Use a larger eps."
+    )
     return ValueError(
         f"A step of eps={eps} does not change {what}, because it is below the "
-        "precision of the input's dtype at that value. Use a larger eps."
+        f"precision of the input's dtype at that value. {hint}"
     )
 
 
 def _check_step(
-    step: float, input_path: str, idx: tuple[int, ...], eps: float
+    step: float,
+    inputs_dict: dict[str, Any],
+    input_path: str,
+    idx: tuple[int, ...],
+    eps: float,
 ) -> float:
     """Raise if rounding to the input's dtype cancelled the step."""
     if step == 0:
-        raise _step_too_small(eps, f"input '{input_path}' at index {idx}")
+        value = np.asarray(get_at_path(inputs_dict, input_path))[idx]
+        raise _step_too_small(
+            eps, f"input '{input_path}' at index {idx}", float(np.spacing(value))
+        )
     return step
 
 
@@ -272,7 +285,7 @@ def _compute_central_diff_row(
     """
     inputs_plus, step_plus = _perturb_input(inputs_dict, input_path, idx, eps)
     inputs_minus, step_minus = _perturb_input(inputs_dict, input_path, idx, -eps)
-    step = _check_step(step_plus - step_minus, input_path, idx, eps)
+    step = _check_step(step_plus - step_minus, inputs_dict, input_path, idx, eps)
 
     outputs_plus = _dump_outputs(apply_fn(input_schema.model_validate(inputs_plus)))
     outputs_minus = _dump_outputs(apply_fn(input_schema.model_validate(inputs_minus)))
@@ -308,7 +321,7 @@ def _compute_forward_diff_row(
         The gradient of output_path with respect to input_path[idx].
     """
     inputs_plus, step = _perturb_input(inputs_dict, input_path, idx, eps)
-    step = _check_step(step, input_path, idx, eps)
+    step = _check_step(step, inputs_dict, input_path, idx, eps)
     outputs_plus = _dump_outputs(apply_fn(input_schema.model_validate(inputs_plus)))
 
     return (

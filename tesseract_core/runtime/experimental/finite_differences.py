@@ -332,8 +332,10 @@ def _compute_jacobian_stochastic(
             plus = _perturb_in_dtype(in_arr, delta, eps[in_path])
             minus = _perturb_in_dtype(in_arr, -delta, eps[in_path])
             applied_steps[in_path] = plus.astype(np.float64) - minus.astype(np.float64)
-            if np.any(applied_steps[in_path] == 0):
-                raise _step_too_small(eps[in_path], f"input '{in_path}'")
+            frozen = applied_steps[in_path] == 0
+            if np.any(frozen):
+                spacing = float(np.max(np.spacing(np.abs(np.asarray(in_arr)[frozen]))))
+                raise _step_too_small(eps[in_path], f"input '{in_path}'", spacing)
             inputs_plus_dict = set_at_path(inputs_plus_dict, {in_path: plus})
             inputs_minus_dict = set_at_path(inputs_minus_dict, {in_path: minus})
 
@@ -486,6 +488,7 @@ def finite_difference_jvp(
                 inputs_minus_dict = set_at_path(inputs_minus_dict, {in_path: reference})
             moved = moved or bool(np.any(plus != reference))
 
+        # Each step-size group is one pair of evaluations, so the check is per group.
         if not moved:
             raise _step_too_small(group_eps, "any input along the tangent")
 
@@ -753,8 +756,10 @@ def _compute_vjp_stochastic(
             plus = _perturb_in_dtype(in_arr, delta, eps[in_path])
             minus = _perturb_in_dtype(in_arr, -delta, eps[in_path])
             applied_steps[in_path] = plus.astype(np.float64) - minus.astype(np.float64)
-            if np.any(applied_steps[in_path] == 0):
-                raise _step_too_small(eps[in_path], f"input '{in_path}'")
+            frozen = applied_steps[in_path] == 0
+            if np.any(frozen):
+                spacing = float(np.max(np.spacing(np.abs(np.asarray(in_arr)[frozen]))))
+                raise _step_too_small(eps[in_path], f"input '{in_path}'", spacing)
             inputs_plus_dict = set_at_path(inputs_plus_dict, {in_path: plus})
             inputs_minus_dict = set_at_path(inputs_minus_dict, {in_path: minus})
 
